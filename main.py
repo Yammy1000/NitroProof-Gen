@@ -128,18 +128,32 @@ class NitroProofCustom(discord.ui.Modal, title='Fake Nitro Proof System'):
         required=True,
     )
 
-    async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
-        try:
-            self.receiveravatar_value = self.receiveravatar.value if self.receiveravatar.value else config["default_avatar"]
-            proof = BoostPage(self.nitrotype.value, interaction.user.display_name, interaction.user.avatar.url, self.authortext.value, self.receiveravatar_value, self.receivername.value, self.receivertext.value).get_proof()
-            hti.screenshot(html_str=proof, size=(random.randint(730, 1100), random.randint(450, 470)), save_as='proof.png')
-            
-            await interaction.user.send(file=discord.File('proof.png'))
-            await interaction.followup.send(f"Proof generated! Check your DMs.", ephemeral=True)
-        except Exception as e:
-            await interaction.followup.send(f'Oops! Proof cannot be generated due to the following error: {e}', ephemeral=True)
-            return
+async def on_submit(self, interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    try:
+        self.receiveravatar_value = self.receiveravatar.value if self.receiveravatar.value else config["default_avatar"]
+        proof = BoostPage(self.nitrotype.value, interaction.user.display_name, interaction.user.avatar.url, self.authortext.value, self.receiveravatar_value, self.receivername.value, self.receivertext.value).get_proof()
+        
+        # Log the proof HTML content for debugging
+        print(proof)
+        
+        # Check if the proof HTML content is valid
+        if not proof:
+            raise ValueError("Proof HTML content is empty")
+        
+        # Generate the screenshot
+        hti.screenshot(html_str=proof, size=(random.randint(730, 1100), random.randint(450, 470)), save_as='proof.png')
+        
+        # Check if the proof.png file was created
+        if not os.path.exists('proof.png'):
+            raise FileNotFoundError("proof.png does not exist")
+        
+        await interaction.user.send(file=discord.File('proof.png'))
+        await interaction.followup.send(f"Proof generated! Check your DMs.", ephemeral=True)
+    except Exception as e:
+        await interaction.followup.send(f'Oops! Proof cannot be generated due to the following error: {e}', ephemeral=True)
+        traceback.print_tb(e.__traceback__)
+        return
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
         await interaction.response.send_message(f'Oops! Something went wrong. Please try again.', ephemeral=True)
